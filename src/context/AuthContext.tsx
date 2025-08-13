@@ -8,6 +8,9 @@ interface User {
     name?: string;
     email?: string;
     image?: string;
+    userId?: string; // GitHub ID-based user identifier
+    githubUsername?: string;
+    githubId?: number;
 }
 
 interface AuthContextType {
@@ -24,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Combine NextAuth session with user data
     useEffect(() => {
         if (status === 'loading') {
             setIsLoading(true);
@@ -36,6 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 name: session.user.name || '',
                 email: session.user.email || '',
                 image: session.user.image || '',
+                userId: (session.user as any).userId || '', // GitHub ID-based user ID
+                githubUsername: (session.user as any).githubUsername || '',
+                githubId: (session.user as any).githubId || 0,
             });
         } else {
             setUser(null);

@@ -2,17 +2,19 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
-    const { user, logout, isLoading } = useAuth();
+    const { user, isLoading } = useAuth();
+    const router = useRouter();
 
     const handleAvatarClick = () => {
         if (user) {
-            // Егер пайдаланушы кірген болса, профиль немесе logout мәзірі көрсету
-            logout();
+            // Егер пайдаланушы кірген болса, account settings бетіне өту
+            router.push('/account');
         } else {
             // Егер кірмеген болса, login page-ге өту
-            window.location.href = '/login';
+            router.push('/login');
         }
     };
 
@@ -47,14 +49,14 @@ export default function Header() {
                         </div>
                     ) : user ? (
                         <img
-                            src={user.image || "https://randomuser.me/api/portraits/men/32.jpg"}
+                            src={user.image || "/default-avatar.svg"}
                             alt={user.name || "User Avatar"}
                             className="w-full h-full object-cover"
                         />
                     ) : (
                         <img
-                            src="https://randomuser.me/api/portraits/men/32.jpg"
-                            alt="Avatar"
+                            src="/default-avatar.svg"
+                            alt="Default Avatar"
                             className="w-full h-full object-cover"
                         />
                     )}

@@ -7,8 +7,8 @@ const menu = [
     { label: 'DashboardScreen', href: '/dashboard', icon: '🏠' },
     { label: 'GoalsScreen', href: '/goals', icon: '🎯' },
     { label: 'PortfoliosScreen', href: '/portfolios', icon: '🗂️' },
-    { label: 'HackathonScreen', href: '/hackathon', icon: '🚀' },
-    { label: 'Settings', href: '/settings', icon: '⚙️' },
+    { label: 'HackathonScreen', href: '/hackathon', icon: '��' },
+    { label: 'Account Settings', href: '/account', icon: '👤' },
 ];
 
 export default function Sidebar() {

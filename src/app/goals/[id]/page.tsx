@@ -1,13 +1,98 @@
+'use client';
+
 import Sidebar from '@/components/Sidebar';
-import { goalsData } from '@/types/goal';
+import { useAuth } from '@/context/AuthContext';
+import { getGoalById } from '@/lib/goals';
+import { Goal } from '@/types/goal';
+import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
 
 export default function GoalDetailPage({ params }: { params: { id: string } }) {
-    const goal = goalsData.find(g => g.id === params.id);
+    const { user } = useAuth();
+    const [goal, setGoal] = useState<Goal | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    if (!goal) {
+    useEffect(() => {
+        const loadGoal = async () => {
+            if (!user?.userId) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+                setError(null);
+                const goalData = await getGoalById(user.userId, params.id);
+                setGoal(goalData);
+            } catch (err) {
+                console.error('Error loading goal:', err);
+                setError('Failed to load goal. Please try again.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadGoal();
+    }, [user?.userId, params.id]);
+
+    if (isLoading) {
+        return (
+            <div className="flex min-h-screen bg-[#fffbe9]">
+                <Sidebar />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !goal) {
         notFound();
     }
+
+    const getCategoryIcon = (category: Goal['category']) => {
+        switch (category) {
+            case 'WEB':
+                return '🌐';
+            case 'MOBILE':
+                return '📱';
+            case 'UI/UX':
+                return '🎨';
+            case 'GRAPHIC':
+                return '🖼️';
+            case '3D':
+                return '🎭';
+            default:
+                return '📋';
+        }
+    };
+
+    const getStatusText = (status: Goal['status']) => {
+        switch (status) {
+            case 'completed':
+                return 'Completed';
+            case 'active':
+                return 'Active';
+            case 'paused':
+                return 'Paused';
+            default:
+                return 'Unknown';
+        }
+    };
+
+    const getStatusColor = (status: Goal['status']) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-green-500';
+            case 'active':
+                return 'bg-yellow-500';
+            case 'paused':
+                return 'bg-gray-400';
+            default:
+                return 'bg-gray-400';
+        }
+    };
 
     return (
         <div className="flex min-h-screen bg-[#fffbe9]">
@@ -18,30 +103,29 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                     <div className="bg-white rounded-2xl shadow p-6 mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <span className="text-2xl">{goal.icon}</span>
+                                <span className="text-2xl">{getCategoryIcon(goal.category)}</span>
                                 <h1 className="text-2xl font-bold text-gray-800">{goal.title}</h1>
                             </div>
-                            <span className={`px-3 py-1 text-white text-sm rounded-full font-medium ${goal.status === 'done' ? 'bg-green-500' :
-                                goal.status === 'in_progress' ? 'bg-yellow-500' :
-                                    'bg-gray-400'
-                                }`}>
-                                {goal.status === 'done' ? 'Done' :
-                                    goal.status === 'in_progress' ? 'In Progress' :
-                                        'Not Started'}
+                            <span className={`px-3 py-1 text-white text-sm rounded-full font-medium ${getStatusColor(goal.status)}`}>
+                                {getStatusText(goal.status)}
                             </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <span>⏰</span>
-                                <span>Жалпы жоспар: {goal.totalHours} сағат ({goal.totalTasks} тапсырма)</span>
+                                <span>Жалпы жоспар: {goal.estimatedHours} сағат ({goal.tasks.length} тапсырма)</span>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <span>📅</span>
-                                <span>Уақыты: {goal.startDate} - {goal.endDate}</span>
+                                <span>Уақыты: {goal.targetDate.toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <span>🎯</span>
+                                <span>Priority: {goal.priority}</span>
                             </div>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div className={`h-3 rounded-full ${goal.status === 'done' ? 'bg-green-500' : 'bg-violet-600'
+                            <div className={`h-3 rounded-full ${goal.status === 'completed' ? 'bg-green-500' : 'bg-violet-600'
                                 }`} style={{ width: `${goal.progress}%` }}></div>
                         </div>
                         <div className="text-sm text-gray-600 mt-2">Жалпы прогресс: {goal.progress}%</div>
@@ -74,109 +158,67 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                             <div className="bg-white rounded-2xl shadow p-6">
                                 <h2 className="font-semibold text-lg mb-4">Сабақ / Task тізімі</h2>
 
-                                {goal.tasks.map((task) => (
-                                    <div key={task.id} className="border border-gray-200 rounded-xl p-4 mb-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h3 className="font-medium text-gray-800">{task.title}</h3>
-                                            <span className="text-sm text-gray-600">{task.duration} мин</span>
-                                        </div>
-                                        {task.link && (
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <span className="text-sm text-violet-600">🔗</span>
-                                                <span className="text-sm text-violet-600 underline">{task.link}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex gap-2 mb-3">
-                                            <button className={`px-3 py-1 text-white text-sm rounded-lg ${task.status === 'done' ? 'bg-green-500' :
-                                                task.status === 'in_progress' ? 'bg-violet-600' :
-                                                    'bg-gray-400'
-                                                }`}>
-                                                {task.status === 'done' ? 'Done' :
-                                                    task.status === 'in_progress' ? 'In Progress' :
-                                                        'Start Task'}
-                                            </button>
-                                            <button className={`px-3 py-1 border text-sm rounded-lg flex items-center gap-1 ${task.status === 'done' ? 'border-green-500 text-green-600' :
-                                                task.status === 'in_progress' ? 'border-violet-600 text-violet-600' :
-                                                    'border-gray-400 text-gray-600'
-                                                }`}>
-                                                <span>⏰</span>
-                                                Start Timer
-                                            </button>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="text-sm text-gray-600">Push жасалды ма?</span>
-                                            <span className={task.pushDone ? "text-green-500" : "text-red-500"}>
-                                                {task.pushDone ? "✅" : "❌"}
-                                            </span>
-                                        </div>
-                                        <div className="bg-gray-50 rounded-lg p-3">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-sm">💬</span>
-                                                <span className="text-sm font-medium">Мұғалім фидбэкі</span>
-                                            </div>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                {task.teacherFeedback || 'Күтілуде...'}
-                                            </p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">🏆</span>
-                                                <span className={`text-sm font-medium ${task.score ? 'text-violet-600' : 'text-gray-500'
-                                                    }`}>
-                                                    Баға: {task.score ? `${task.score}/10` : '-'}
-                                                </span>
-                                            </div>
-                                        </div>
+                                {goal.tasks.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <div className="text-4xl mb-2">📝</div>
+                                        <p className="text-gray-600">No tasks yet. Add your first task to get started!</p>
                                     </div>
-                                ))}
-
-                                {/* Add Subtask Button */}
-                                <button className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:border-violet-400 hover:text-violet-600 transition">
-                                    + Add Subtask
-                                </button>
+                                ) : (
+                                    goal.tasks.map((task) => (
+                                        <div key={task.id} className="border border-gray-200 rounded-xl p-4 mb-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h3 className="font-medium text-gray-800">{task.title}</h3>
+                                                <span className="text-sm text-gray-600">{task.estimatedMinutes} мин</span>
+                                            </div>
+                                            {task.description && (
+                                                <p className="text-sm text-gray-600 mb-3">{task.description}</p>
+                                            )}
+                                            <div className="flex gap-2 mb-3">
+                                                <button className={`px-3 py-1 text-white text-sm rounded-lg ${task.completed ? 'bg-green-500' : 'bg-violet-600'}`}>
+                                                    {task.completed ? 'Completed' : 'Mark Complete'}
+                                                </button>
+                                                <button className="px-3 py-1 border border-gray-400 text-gray-600 text-sm rounded-lg">
+                                                    Edit Task
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Bottom Section: GitHub Push Log & Teacher Feedback */}
-                    <div className="mt-6 space-y-6">
-                        {/* GitHub Push Log */}
+                    {/* GitHub Push Logs and Feedback */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                        {/* GitHub Push Logs */}
                         <div className="bg-white rounded-2xl shadow p-6">
                             <h2 className="font-semibold text-lg mb-4">GitHub Push Логтері</h2>
-                            <div className="space-y-4">
-                                {goal.githubPushes.length > 0 ? (
-                                    goal.githubPushes.map((push) => (
-                                        <div key={push.id} className="border-l-4 border-violet-500 pl-4">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-sm font-medium text-gray-800">{push.date}</span>
-                                                <span className="text-xs text-violet-600">+{push.progressAdded} минут прогреске қосылды</span>
-                                            </div>
-                                            <p className="text-sm text-gray-600 mb-2">{push.message}</p>
-                                            <a href={push.url} className="text-sm text-violet-600 underline">View on GitHub</a>
+                            {goal.githubPushes.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <div className="text-4xl mb-2">📊</div>
+                                    <p className="text-gray-600">No GitHub pushes yet. Start coding to see your progress!</p>
+                                </div>
+                            ) : (
+                                goal.githubPushes.map((push) => (
+                                    <div key={push.id} className="border border-gray-200 rounded-xl p-4 mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-800">{push.commitMessage}</span>
+                                            <span className="text-xs text-gray-500">{push.timestamp.toLocaleDateString()}</span>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-gray-500">GitHub push логтері жоқ</p>
-                                )}
-                            </div>
+                                        <div className="text-xs text-gray-600">
+                                            Repository: {push.repositoryName}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
 
                         {/* Teacher Feedback */}
                         <div className="bg-white rounded-2xl shadow p-6">
                             <h2 className="font-semibold text-lg mb-4">Мұғалім фидбэкі</h2>
-                            <div className="space-y-4">
-                                {goal.teacherFeedback ? (
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <p className="text-sm text-gray-700 mb-3">{goal.teacherFeedback}</p>
-                                        {goal.overallScore && (
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <span className="text-sm">🏆</span>
-                                                <span className="text-sm font-medium text-violet-600">Балл: {goal.overallScore} / 10</span>
-                                            </div>
-                                        )}
-                                        <a href="#" className="text-sm text-violet-600 underline">Ресурс ұсыну (link)</a>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-gray-500">Мұғалім фидбэкі әлі жоқ</p>
-                                )}
+                            <div className="text-center py-8">
+                                <div className="text-4xl mb-2">👨‍🏫</div>
+                                <p className="text-gray-600">No feedback yet. Your teacher will review your progress soon!</p>
                             </div>
                         </div>
                     </div>

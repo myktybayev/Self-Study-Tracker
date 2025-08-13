@@ -1,155 +1,123 @@
 export interface Task {
     id: string;
     title: string;
-    duration: number; // minutes
-    link?: string;
-    status: 'not_started' | 'in_progress' | 'done';
-    pushDone: boolean;
-    teacherFeedback?: string;
-    score?: number;
-}
-
-export interface Goal {
-    id: string;
-    title: string;
-    icon: string;
-    startDate: string;
-    endDate: string;
-    totalHours: number;
-    totalTasks: number;
-    status: 'not_started' | 'in_progress' | 'done';
-    progress: number; // percentage
-    completedTasks: number;
-    tasks: Task[];
-    githubPushes: GitHubPush[];
-    teacherFeedback?: string;
-    overallScore?: number;
+    description?: string;
+    completed: boolean;
+    estimatedMinutes: number;
+    actualMinutes?: number;
+    createdAt: Date;
+    completedAt?: Date;
 }
 
 export interface GitHubPush {
     id: string;
-    date: string;
-    message: string;
-    url: string;
-    progressAdded: number; // minutes
+    commitMessage: string;
+    repository: string;
+    branch: string;
+    timestamp: Date;
+    minutesEarned: number;
 }
 
-// Mock data
+export interface Goal {
+    id: string;
+    userId: string; // Firebase user ID
+    title: string;
+    description: string;
+    category: 'WEB' | 'MOBILE' | 'UI/UX' | 'GRAPHIC' | '3D';
+    status: 'active' | 'completed' | 'paused';
+    priority: 'low' | 'medium' | 'high';
+    targetDate: Date;
+    estimatedHours: number;
+    actualHours: number;
+    progress: number; // 0-100
+    tasks: Task[];
+    githubPushes: GitHubPush[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// Mock data for development
 export const goalsData: Goal[] = [
     {
         id: '1',
-        title: 'Login экранын жасау',
-        icon: '💻',
-        startDate: '04.08',
-        endDate: '06.08',
-        totalHours: 5,
-        totalTasks: 3,
-        status: 'in_progress',
-        progress: 67,
-        completedTasks: 2,
+        userId: 'user1',
+        title: 'Login экран жасау',
+        description: 'React Native арқылы әдемі login экран жасау',
+        category: 'MOBILE',
+        status: 'active',
+        priority: 'high',
+        targetDate: new Date('2024-02-15'),
+        estimatedHours: 8,
+        actualHours: 4,
+        progress: 50,
         tasks: [
             {
-                id: '1-1',
-                title: 'UI дизайнын жасау',
-                duration: 60,
-                link: 'Figma Link',
-                status: 'in_progress',
-                pushDone: true,
-                teacherFeedback: 'UI structure жақсы, бірақ padding аз.',
-                score: 9
+                id: '1',
+                title: 'UI дизайн жасау',
+                description: 'Figma-да login экран дизайнын жасау',
+                completed: true,
+                estimatedMinutes: 120,
+                actualMinutes: 90,
+                createdAt: new Date('2024-01-20'),
+                completedAt: new Date('2024-01-21'),
             },
             {
-                id: '1-2',
-                title: 'Backend API интеграциясы',
-                duration: 120,
-                link: 'Google Doc',
-                status: 'not_started',
-                pushDone: false,
-                teacherFeedback: 'Күтілуде...',
-                score: undefined
-            }
+                id: '2',
+                title: 'React Native компонент жасау',
+                description: 'Login формасын React Native-де жасау',
+                completed: false,
+                estimatedMinutes: 180,
+                createdAt: new Date('2024-01-22'),
+            },
         ],
         githubPushes: [
             {
-                id: 'push-1',
-                date: '2025-08-06',
-                message: 'feat: added login UI',
-                url: '#',
-                progressAdded: 25
+                id: '1',
+                commitMessage: 'Add login screen UI components',
+                repository: 'my-app',
+                branch: 'main',
+                timestamp: new Date('2024-01-21T10:30:00'),
+                minutesEarned: 25,
             },
-            {
-                id: 'push-2',
-                date: '2025-08-05',
-                message: 'refactor: improve UI padding',
-                url: '#',
-                progressAdded: 25
-            }
         ],
-        teacherFeedback: 'Код structure дұрыс, бірақ animation жоқ',
-        overallScore: 10
+        createdAt: new Date('2024-01-20'),
+        updatedAt: new Date('2024-01-21'),
     },
     {
         id: '2',
-        title: 'Read "Clean Code"',
-        icon: '📚',
-        startDate: '07.08',
-        endDate: '01.09',
-        totalHours: 15,
-        totalTasks: 10,
-        status: 'not_started',
-        progress: 0,
-        completedTasks: 0,
-        tasks: [],
-        githubPushes: [],
-        teacherFeedback: undefined,
-        overallScore: undefined
+        userId: 'user1',
+        title: 'Dashboard API интеграция',
+        description: 'Backend API-мен dashboard деректерін интеграция жасау',
+        category: 'WEB',
+        status: 'active',
+        priority: 'medium',
+        targetDate: new Date('2024-02-20'),
+        estimatedHours: 12,
+        actualHours: 6,
+        progress: 30,
+        tasks: [
+            {
+                id: '3',
+                title: 'API endpoint жасау',
+                description: 'Dashboard деректерін қайтаратын API жасау',
+                completed: true,
+                estimatedMinutes: 240,
+                actualMinutes: 200,
+                createdAt: new Date('2024-01-18'),
+                completedAt: new Date('2024-01-19'),
+            },
+        ],
+        githubPushes: [
+            {
+                id: '2',
+                commitMessage: 'Implement dashboard API endpoints',
+                repository: 'backend-api',
+                branch: 'develop',
+                timestamp: new Date('2024-01-19T14:20:00'),
+                minutesEarned: 25,
+            },
+        ],
+        createdAt: new Date('2024-01-18'),
+        updatedAt: new Date('2024-01-19'),
     },
-    {
-        id: '3',
-        title: 'Complete JavaScript Project',
-        icon: '✅',
-        startDate: '01.07',
-        endDate: '20.07',
-        totalHours: 20,
-        totalTasks: 5,
-        status: 'done',
-        progress: 100,
-        completedTasks: 5,
-        tasks: [],
-        githubPushes: [],
-        teacherFeedback: 'Жақсы жұмыс!',
-        overallScore: 10
-    },
-    {
-        id: '4',
-        title: 'Learn SQL Basics',
-        icon: '🗄️',
-        startDate: '10.08',
-        endDate: '25.08',
-        totalHours: 10,
-        totalTasks: 5,
-        status: 'in_progress',
-        progress: 40,
-        completedTasks: 2,
-        tasks: [],
-        githubPushes: [],
-        teacherFeedback: undefined,
-        overallScore: undefined
-    },
-    {
-        id: '5',
-        title: 'Understand Git & GitHub',
-        icon: '🌿',
-        startDate: '01.06',
-        endDate: '15.06',
-        totalHours: 8,
-        totalTasks: 3,
-        status: 'done',
-        progress: 100,
-        completedTasks: 3,
-        tasks: [],
-        githubPushes: [],
-        teacherFeedback: 'Git командаларын жақсы меңгерген',
-        overallScore: 9
-    }
 ];
