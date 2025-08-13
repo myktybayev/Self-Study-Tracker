@@ -2,34 +2,40 @@ export interface Task {
     id: string;
     title: string;
     description?: string;
-    completed: boolean;
     estimatedMinutes: number;
     actualMinutes?: number;
+    status: 'not_started' | 'in_progress' | 'completed';
+    resourceUrl?: string;
+    githubPushed: boolean;
+    feedback?: {
+        text: string;
+        score: number;
+    };
     createdAt: Date;
-    completedAt?: Date;
+    updatedAt: Date;
 }
 
 export interface GitHubPush {
     id: string;
     commitMessage: string;
-    repository: string;
-    branch: string;
+    repositoryName: string;
+    commitUrl: string;
     timestamp: Date;
-    minutesEarned: number;
+    progressAdded: number; // minutes added to progress
 }
 
 export interface Goal {
     id: string;
-    userId: string; // Firebase user ID
+    userId: string;
     title: string;
     description: string;
     category: 'WEB' | 'MOBILE' | 'UI/UX' | 'GRAPHIC' | '3D';
     status: 'active' | 'completed' | 'paused';
-    priority: 'low' | 'medium' | 'high';
-    targetDate: Date;
     estimatedHours: number;
     actualHours: number;
-    progress: number; // 0-100
+    targetDate: Date;
+    priority: 'low' | 'medium' | 'high';
+    progress: number;
     tasks: Task[];
     githubPushes: GitHubPush[];
     createdAt: Date;
@@ -40,84 +46,57 @@ export interface Goal {
 export const goalsData: Goal[] = [
     {
         id: '1',
-        userId: 'user1',
-        title: 'Login экран жасау',
-        description: 'React Native арқылы әдемі login экран жасау',
-        category: 'MOBILE',
-        status: 'active',
-        priority: 'high',
-        targetDate: new Date('2024-02-15'),
-        estimatedHours: 8,
-        actualHours: 4,
-        progress: 50,
-        tasks: [
-            {
-                id: '1',
-                title: 'UI дизайн жасау',
-                description: 'Figma-да login экран дизайнын жасау',
-                completed: true,
-                estimatedMinutes: 120,
-                actualMinutes: 90,
-                createdAt: new Date('2024-01-20'),
-                completedAt: new Date('2024-01-21'),
-            },
-            {
-                id: '2',
-                title: 'React Native компонент жасау',
-                description: 'Login формасын React Native-де жасау',
-                completed: false,
-                estimatedMinutes: 180,
-                createdAt: new Date('2024-01-22'),
-            },
-        ],
-        githubPushes: [
-            {
-                id: '1',
-                commitMessage: 'Add login screen UI components',
-                repository: 'my-app',
-                branch: 'main',
-                timestamp: new Date('2024-01-21T10:30:00'),
-                minutesEarned: 25,
-            },
-        ],
-        createdAt: new Date('2024-01-20'),
-        updatedAt: new Date('2024-01-21'),
-    },
-    {
-        id: '2',
-        userId: 'user1',
-        title: 'Dashboard API интеграция',
-        description: 'Backend API-мен dashboard деректерін интеграция жасау',
+        userId: 'github_123456',
+        title: 'React Todo App',
+        description: 'Build a complete todo application with React and Firebase',
         category: 'WEB',
         status: 'active',
-        priority: 'medium',
-        targetDate: new Date('2024-02-20'),
-        estimatedHours: 12,
-        actualHours: 6,
-        progress: 30,
+        estimatedHours: 8,
+        actualHours: 2,
+        targetDate: new Date('2024-12-31'),
+        priority: 'high',
+        progress: 25,
         tasks: [
             {
-                id: '3',
-                title: 'API endpoint жасау',
-                description: 'Dashboard деректерін қайтаратын API жасау',
-                completed: true,
-                estimatedMinutes: 240,
-                actualMinutes: 200,
-                createdAt: new Date('2024-01-18'),
-                completedAt: new Date('2024-01-19'),
+                id: 'task_1',
+                title: 'UI дизайнын жасау',
+                description: 'Create the main UI components for the todo app',
+                estimatedMinutes: 60,
+                status: 'in_progress',
+                resourceUrl: 'https://youtube.com/watch?v=example',
+                githubPushed: true,
+                feedback: {
+                    text: 'UI structure жақсы, бірақ padding аз.',
+                    score: 9
+                },
+                actualMinutes: 25,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-02')
             },
+            {
+                id: 'task_2',
+                title: 'Firebase интеграциясы',
+                description: 'Connect the app to Firebase for data persistence',
+                estimatedMinutes: 90,
+                status: 'not_started',
+                resourceUrl: 'https://firebase.google.com/docs',
+                githubPushed: false,
+                actualMinutes: 0,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01')
+            }
         ],
         githubPushes: [
             {
-                id: '2',
-                commitMessage: 'Implement dashboard API endpoints',
-                repository: 'backend-api',
-                branch: 'develop',
-                timestamp: new Date('2024-01-19T14:20:00'),
-                minutesEarned: 25,
-            },
+                id: 'push_1',
+                commitMessage: 'feat: added login UI',
+                repositoryName: 'react-todo-app',
+                commitUrl: 'https://github.com/user/react-todo-app/commit/abc123',
+                timestamp: new Date('2024-01-02'),
+                progressAdded: 25
+            }
         ],
-        createdAt: new Date('2024-01-18'),
-        updatedAt: new Date('2024-01-19'),
-    },
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-02')
+    }
 ];

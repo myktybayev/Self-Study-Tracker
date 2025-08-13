@@ -1,8 +1,7 @@
 {
-  "/goals/page": "app/goals/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/goals/[id]/page": "app/goals/[id]/page.js",
-  "/goals/new/page": "app/goals/new/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/login/page": "app/login/page.js"
+  "/goals/[id]/page": "app/goals/[id]/page.js",
+  "/login/page": "app/login/page.js",
+  "/goals/new/page": "app/goals/new/page.js",
+  "/goals/page": "app/goals/page.js"
 }

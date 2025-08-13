@@ -23,6 +23,14 @@ const getUserDocument = (userId: string) => {
     return doc(db!, 'goals', userId);
 };
 
+// Helper function to get tasks subcollection reference
+const getTasksCollection = (userId: string, goalId: string) => {
+    if (!isFirebaseAvailable()) {
+        throw new Error('Firebase is not available');
+    }
+    return collection(db!, 'goals', userId, 'userGoals', goalId, 'tasks');
+};
+
 // Create a new goal
 export const createGoal = async (goalData: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
     if (!isFirebaseAvailable()) {
@@ -47,6 +55,71 @@ export const createGoal = async (goalData: Omit<Goal, 'id' | 'createdAt' | 'upda
 
     const docRef = await addDoc(getUserGoalsCollection(userId), goalWithTimestamps);
     return docRef.id;
+};
+
+// Create a new task for a goal
+export const createTask = async (userId: string, goalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    if (!isFirebaseAvailable()) {
+        throw new Error('Firebase is not available');
+    }
+
+    const taskWithTimestamps = {
+        ...taskData,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(getTasksCollection(userId, goalId), taskWithTimestamps);
+    return docRef.id;
+};
+
+// Get all tasks for a specific goal
+export const getGoalTasks = async (userId: string, goalId: string): Promise<Task[]> => {
+    if (!isFirebaseAvailable()) {
+        console.warn('Firebase not available, returning empty array');
+        return [];
+    }
+
+    try {
+        const q = query(
+            getTasksCollection(userId, goalId),
+            orderBy('createdAt', 'asc')
+        );
+        const querySnapshot = await getDocs(q);
+
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate() || new Date(),
+            updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        })) as Task[];
+    } catch (error) {
+        console.error('Error getting goal tasks:', error);
+        return [];
+    }
+};
+
+// Update a task
+export const updateTask = async (userId: string, goalId: string, taskId: string, updates: Partial<Task>): Promise<void> => {
+    if (!isFirebaseAvailable()) {
+        throw new Error('Firebase is not available');
+    }
+
+    const docRef = doc(db!, 'goals', userId, 'userGoals', goalId, 'tasks', taskId);
+    await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now(),
+    });
+};
+
+// Delete a task
+export const deleteTask = async (userId: string, goalId: string, taskId: string): Promise<void> => {
+    if (!isFirebaseAvailable()) {
+        throw new Error('Firebase is not available');
+    }
+
+    const docRef = doc(db!, 'goals', userId, 'userGoals', goalId, 'tasks', taskId);
+    await deleteDoc(docRef);
 };
 
 // Get all goals for a specific user
@@ -130,7 +203,7 @@ export const deleteGoal = async (userId: string, goalId: string): Promise<void> 
     await deleteDoc(docRef);
 };
 
-// Add a task to a goal
+// Add a task to a goal (legacy function - use createTask instead)
 export const addTaskToGoal = async (userId: string, goalId: string, task: Omit<Task, 'id'>): Promise<void> => {
     if (!isFirebaseAvailable()) {
         throw new Error('Firebase is not available');
@@ -150,7 +223,7 @@ export const addTaskToGoal = async (userId: string, goalId: string, task: Omit<T
     await updateGoal(userId, goalId, { tasks: updatedTasks });
 };
 
-// Update a task in a goal
+// Update a task in a goal (legacy function - use updateTask instead)
 export const updateTaskInGoal = async (userId: string, goalId: string, taskId: string, updates: Partial<Task>): Promise<void> => {
     if (!isFirebaseAvailable()) {
         throw new Error('Firebase is not available');
