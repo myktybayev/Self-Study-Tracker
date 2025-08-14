@@ -321,7 +321,7 @@ export default function GoalsPage() {
                                         }`} style={{ width: `${goal.progress}%` }}></div>
                                 </div>
                                 <div className="text-xs text-gray-600 mb-4">
-                                    {goal.tasks.filter(task => task.completed).length}/{goal.tasks.length} tasks completed
+                                    {goal.tasks.filter(task => task.status === 'completed').length}/{goal.tasks.length} tasks completed
                                 </div>
                                 <Link href={`/goals/${goal.id}`} className="w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium text-sm transition block text-center">
                                     View Details

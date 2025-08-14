@@ -7,6 +7,7 @@ export interface Task {
     status: 'not_started' | 'in_progress' | 'completed';
     resourceUrl?: string;
     githubPushed: boolean;
+    githubRepoUrl?: string;
     feedback?: {
         text: string;
         score: number;
