@@ -2,7 +2,7 @@
 
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { getGoalById, createTask, getGoalTasks, updateTask } from '@/lib/goals';
+import { getGoalById, createTask, getGoalTasks, updateTask, updateGoal } from '@/lib/goals';
 import { Goal, Task } from '@/types/goal';
 import { useEffect, useState, useRef } from 'react';
 import { notFound } from 'next/navigation';
@@ -155,6 +155,9 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                                 ? { ...task, actualMinutes: newActualMinutes }
                                 : task
                         ));
+
+                        // Update goal progress after timer completion
+                        setTimeout(() => updateGoalProgress(), 100);
                     }
                 } catch (err) {
                     console.error('Error updating task actual minutes:', err);
@@ -336,6 +339,9 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
             const updatedTasks = await getGoalTasks(user.userId, goal.id);
             setTasks(updatedTasks);
 
+            // Update goal progress after adding new task
+            setTimeout(() => updateGoalProgress(), 100);
+
             // Reset form
             setNewTask({
                 title: '',
@@ -379,12 +385,31 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
         if (!user?.userId || !goal) return;
 
         try {
+            // Get current task status before update
+            const currentTask = tasks.find(task => task.id === taskId);
+            const oldStatus = currentTask?.status;
+
             await updateTask(user.userId, goal.id, taskId, { status: newStatus });
 
             // Update local state
             setTasks(prev => prev.map(task =>
                 task.id === taskId ? { ...task, status: newStatus } : task
             ));
+
+            // Calculate progress change
+            const totalTasks = tasks.length;
+            const taskPercentage = 100 / totalTasks;
+
+            if (oldStatus === 'completed' && newStatus !== 'completed') {
+                // Task was completed, now it's not - decrease progress
+                console.log(`Task ${taskId} status changed from completed to ${newStatus} - decreasing progress by ${taskPercentage.toFixed(2)}%`);
+            } else if (oldStatus !== 'completed' && newStatus === 'completed') {
+                // Task was not completed, now it is - increase progress
+                console.log(`Task ${taskId} status changed to completed - increasing progress by ${taskPercentage.toFixed(2)}%`);
+            }
+
+            // Update goal progress after task status change
+            setTimeout(() => updateGoalProgress(), 100);
         } catch (err) {
             console.error('Error updating task status:', err);
             setError('Failed to update task status.');
@@ -410,12 +435,15 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
     };
 
     const handleGitHubUrlSubmit = async (taskId: string) => {
-        if (!user?.userId || !goal || !gitHubUrl.trim()) return;
+        if (!user?.userId || !goal || !gitHubUrl.trim()) {
+            alert('GitHub Repository URL енгізіңіз!');
+            return;
+        }
 
         // Validate GitHub URL
-        const githubUrlPattern = /^https:\/\/github\.com\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
+        const githubUrlPattern = /^https:\/\/github\.com\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+(?:\/)?$/;
         if (!githubUrlPattern.test(gitHubUrl.trim())) {
-            setError('Дұрыс GitHub Repository URL енгізіңіз (мысалы: https://github.com/username/repo)');
+            alert('Дұрыс GitHub Repository URL енгізіңіз!\n\nМысалы:\nhttps://github.com/username/repo\nhttps://github.com/username/project-name');
             return;
         }
 
@@ -439,9 +467,14 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
             // Reset form
             setShowGitHubInput(null);
             setGitHubUrl('');
+
+            // Show success message
+            setError(null);
+            alert('✅ GitHub Repository URL сәтті сақталды!');
+            console.log('GitHub repository URL saved successfully!');
         } catch (err) {
             console.error('Error updating GitHub push status:', err);
-            setError('Failed to update GitHub push status.');
+            alert('❌ GitHub repository URL сақтау кезінде қате орын алды. Қайталап көріңіз.');
         } finally {
             setIsUpdatingGitHub(false);
         }
@@ -451,6 +484,50 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
         setShowGitHubInput(null);
         setGitHubUrl('');
         setError(null);
+        console.log('GitHub URL input cancelled');
+    };
+
+    // Calculate and update goal progress based on individual task completion
+    const updateGoalProgress = async () => {
+        if (!user?.userId || !goal) return;
+
+        try {
+            const totalTasks = tasks.length;
+
+            if (totalTasks === 0) return;
+
+            // Calculate individual task percentage contribution
+            const taskPercentage = 100 / totalTasks;
+
+            // Count completed tasks
+            const completedTasks = tasks.filter(task => task.status === 'completed').length;
+
+            // Calculate total progress
+            const progressPercentage = Math.round(completedTasks * taskPercentage);
+
+            console.log(`Goal progress update: ${completedTasks} completed tasks × ${taskPercentage.toFixed(2)}% each = ${progressPercentage}% total`);
+
+            // Update goal progress in Firebase
+            await updateGoal(user.userId, goal.id, {
+                progress: progressPercentage,
+                actualHours: tasks.reduce((total, task) => total + (task.actualMinutes || 0), 0) / 60, // Convert minutes to hours
+            });
+
+            // Update local goal state immediately
+            setGoal(prev => {
+                if (!prev) return null;
+                const updatedGoal = {
+                    ...prev,
+                    progress: progressPercentage,
+                    actualHours: tasks.reduce((total, task) => total + (task.actualMinutes || 0), 0) / 60,
+                };
+                console.log('Updated goal state:', updatedGoal);
+                return updatedGoal;
+            });
+
+        } catch (err) {
+            console.error('Error updating goal progress:', err);
+        }
     };
 
     const getStatusText = (status: Task['status']) => {
@@ -569,10 +646,14 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                                     {getGoalStatusText(goal.status)}
                                 </span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                     <span>⏰</span>
-                                    <span>Жалпы жоспар: {goal.estimatedHours} сағат ({tasks.length} тапсырма)</span>
+                                    <span>Жалпы жоспар: {goal.estimatedHours} сағат</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <span>✅</span>
+                                    <span>Тапсырмалар: {tasks.filter(t => t.status === 'completed').length} Done / {tasks.length} жалпы (әр task = {(100 / Math.max(tasks.length, 1)).toFixed(1)}%)</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                     <span>📅</span>
@@ -585,9 +666,12 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-3">
                                 <div className={`h-3 rounded-full ${goal.status === 'completed' ? 'bg-green-500' : 'bg-violet-600'
-                                    }`} style={{ width: `${goal.progress}%` }}></div>
+                                    }`} style={{ width: `${goal.progress || 0}%` }}></div>
                             </div>
-                            <div className="text-sm text-gray-600 mt-2">Жалпы прогресс: {goal.progress}%</div>
+                            <div className="text-sm text-gray-600 mt-2">
+                                Жалпы прогресс: {goal.progress || 0}%
+                                {goal.progress === undefined && <span className="text-orange-500 ml-2">(есептелуде...)</span>}
+                            </div>
                         </div>
 
                         {/* Main Content Grid */}
@@ -867,10 +951,11 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                                                                     href={task.githubRepoUrl}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="text-violet-600 underline hover:text-violet-800"
+                                                                    className="text-violet-600 underline hover:text-violet-800 flex items-center gap-1"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
-                                                                    GitHub Repository
+                                                                    <span>GitHub Repo</span>
+                                                                    <span className="text-xs">↗</span>
                                                                 </a>
                                                             </div>
                                                         )}
@@ -886,38 +971,50 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
 
                                                     {/* GitHub URL Input Widget */}
                                                     {showGitHubInput === task.id && (
-                                                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <span className="text-sm font-medium text-gray-700">GitHub Repository URL:</span>
+                                                        <div className="mt-3 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <span className="text-violet-600">📤</span>
+                                                                <span className="text-sm font-medium text-gray-700">GitHub Repository URL енгізіңіз:</span>
                                                             </div>
-                                                            <div className="flex gap-2">
+                                                            <div className="space-y-2">
                                                                 <input
                                                                     type="url"
                                                                     value={gitHubUrl}
                                                                     onChange={(e) => setGitHubUrl(e.target.value)}
                                                                     placeholder="https://github.com/username/repo"
-                                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                                                     onClick={(e) => e.stopPropagation()}
+                                                                    onKeyPress={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            handleGitHubUrlSubmit(task.id);
+                                                                        }
+                                                                    }}
                                                                 />
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleGitHubUrlSubmit(task.id);
-                                                                    }}
-                                                                    disabled={isUpdatingGitHub || !gitHubUrl.trim()}
-                                                                    className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                                                                >
-                                                                    {isUpdatingGitHub ? 'Saving...' : 'Save'}
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleGitHubUrlCancel();
-                                                                    }}
-                                                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition"
-                                                                >
-                                                                    Cancel
-                                                                </button>
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleGitHubUrlSubmit(task.id);
+                                                                        }}
+                                                                        disabled={isUpdatingGitHub || !gitHubUrl.trim()}
+                                                                        className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                                                                    >
+                                                                        {isUpdatingGitHub ? '💾 Сақталуда...' : '💾 Сақтау'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleGitHubUrlCancel();
+                                                                        }}
+                                                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition"
+                                                                    >
+                                                                        Бас тарту
+                                                                    </button>
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    Мысалы: https://github.com/username/project-name
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
